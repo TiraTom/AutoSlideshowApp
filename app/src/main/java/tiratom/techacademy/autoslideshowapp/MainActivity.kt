@@ -1,17 +1,26 @@
 package tiratom.techacademy.autoslideshowapp
 
 import android.Manifest
+import android.content.ContentUris
 import android.content.pm.PackageManager
 import android.os.Build
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
+import android.os.Handler
+import android.provider.MediaStore
 import android.view.View
 import kotlinx.android.synthetic.main.activity_main.*
 import java.security.Permissions
+import java.util.*
 
 class MainActivity : AppCompatActivity(), View.OnClickListener {
 
+    // アクセス許可管理用変数
     private val PERMISSIONS_REQUEST_CODE = 100
+
+    // スライドショー管理用変数
+    private var mTimer: Timer? = null
+    private var mHandler = Handler()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -51,7 +60,7 @@ class MainActivity : AppCompatActivity(), View.OnClickListener {
     // アクセス権限確認結果取得用のメソッド
     override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
 
-        when(requestCode) {
+        when (requestCode) {
             PERMISSIONS_REQUEST_CODE -> {
                 if (grantResults[0] == PackageManager.PERMISSION_GRANTED) {
                     getSlideshowContents()
@@ -65,16 +74,41 @@ class MainActivity : AppCompatActivity(), View.OnClickListener {
     // スライドショー用画像の取得メソッド
     private fun getSlideshowContents() {
 
-    }
+        var resolver = contentResolver
+        val cursor = resolver.query(
+            MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
+            null,
+            null,
+            null,
+            null
+        )
 
+        cursor?.run {
+            if (cursor.moveToFirst()) {
+                do {
+                    // indexからid取得、そのIDから画像のURIを取得
+                    val fieldIndex = cursor.getColumnIndex(MediaStore.Images.Media._ID)
+                    val id = cursor.getLong(fieldIndex)
+                    val imageUri = ContentUris.withAppendedId(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, id)
+
+                    imageView.setImageURI(imageUri)
+                } while (cursor.moveToNext())
+            }
+        }
+    }
 
 
     override fun onClick(p0: View) {
 
-        when(p0.id) {
-            R.id.back_button -> { showOtherPicture() }
-            R.id.start_pause_button -> {}
-            R.id.proceed_button -> { showOtherPicture(false)}
+        when (p0.id) {
+            R.id.back_button -> {
+                showOtherPicture()
+            }
+            R.id.start_pause_button -> {
+            }
+            R.id.proceed_button -> {
+                showOtherPicture(false)
+            }
         }
     }
 
@@ -85,7 +119,9 @@ class MainActivity : AppCompatActivity(), View.OnClickListener {
     }
 
     // スライドショーを再生させるメソッド
-    private fun startSlideshow(){
+    private fun startSlideshow() {
+
+        mTimer = Timer()
 
 
         // スライドショー再生中は進む・戻るボタンを押せないようにする
@@ -95,7 +131,7 @@ class MainActivity : AppCompatActivity(), View.OnClickListener {
 
 
     // スライドショーを停止させるメソッド
-    private fun pauseSlideshow(){
+    private fun pauseSlideshow() {
 
         // スライドショー停止中は進む・戻るボタンを押せるようにする
         changeButtonAvailability(true)
