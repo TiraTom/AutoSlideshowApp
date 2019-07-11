@@ -3,6 +3,7 @@ package tiratom.techacademy.autoslideshowapp
 import android.Manifest
 import android.content.ContentUris
 import android.content.pm.PackageManager
+import android.net.Uri
 import android.os.Build
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
@@ -21,6 +22,10 @@ class MainActivity : AppCompatActivity(), View.OnClickListener {
     // スライドショー管理用変数
     private var mTimer: Timer? = null
     private var mHandler = Handler()
+    private var nowPage: Int = 0
+
+    // スライドショー画像格納用変数
+    private var imageList = mutableListOf<Uri>()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -65,7 +70,7 @@ class MainActivity : AppCompatActivity(), View.OnClickListener {
                 if (grantResults[0] == PackageManager.PERMISSION_GRANTED) {
                     getSlideshowContents()
                 } else {
-                    // アプリを閉じる　（ここでいいかもよくわからないけど）
+                    // TODO アプリを閉じる　（ここでいいかもよくわからないけど）
                 }
             }
         }
@@ -86,12 +91,13 @@ class MainActivity : AppCompatActivity(), View.OnClickListener {
         cursor?.run {
             if (cursor.moveToFirst()) {
                 do {
-                    // indexからid取得、そのIDから画像のURIを取得
+                    // indexからid取得、そのIDから画像のURIを取得し変数に格納
                     val fieldIndex = cursor.getColumnIndex(MediaStore.Images.Media._ID)
                     val id = cursor.getLong(fieldIndex)
                     val imageUri = ContentUris.withAppendedId(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, id)
 
-                    imageView.setImageURI(imageUri)
+                    imageList.add(imageUri)
+
                 } while (cursor.moveToNext())
             }
         }
@@ -102,20 +108,31 @@ class MainActivity : AppCompatActivity(), View.OnClickListener {
 
         when (p0.id) {
             R.id.back_button -> {
-                showOtherPicture()
+                if (imageList.size - 1 <= nowPage){
+                    nowPage = 0
+                } else {
+                    nowPage++
+                }
+
+                imageView.setImageURI(imageList[nowPage])
+
+                pauseSlideshow()
             }
             R.id.start_pause_button -> {
+                // TODO ボタン対応
             }
             R.id.proceed_button -> {
-                showOtherPicture(false)
+                if (nowPage == 0){
+                    nowPage = imageList.size - 1
+                } else {
+                    nowPage--
+                }
+
+                imageView.setImageURI(imageList[nowPage])
+
+                pauseSlideshow()
             }
         }
-    }
-
-
-    // １つ前または１つ後の画像を表示するメソッド
-    private fun showOtherPicture(isNext: Boolean = true) {
-
     }
 
     // スライドショーを再生させるメソッド
@@ -141,7 +158,8 @@ class MainActivity : AppCompatActivity(), View.OnClickListener {
 
     // 進む・戻るボタンの有効化/無効化を行うメソッド
     private fun changeButtonAvailability(isEnable: Boolean) {
-
+        back_button.isEnabled = isEnable
+        proceed_button.isEnabled = isEnable
     }
 
 
