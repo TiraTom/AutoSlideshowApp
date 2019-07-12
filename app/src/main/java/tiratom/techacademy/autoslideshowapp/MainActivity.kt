@@ -10,8 +10,8 @@ import android.os.Bundle
 import android.os.Handler
 import android.provider.MediaStore
 import android.view.View
+import com.google.android.material.snackbar.Snackbar
 import kotlinx.android.synthetic.main.activity_main.*
-import java.security.Permissions
 import java.util.*
 
 class MainActivity : AppCompatActivity(), View.OnClickListener {
@@ -22,7 +22,7 @@ class MainActivity : AppCompatActivity(), View.OnClickListener {
     // スライドショー管理用変数
     private var mTimer: Timer? = null
     private var mHandler = Handler()
-    private var nowPage: Int = 0
+    private var nowIndex: Int = 0
 
     // スライドショー画像格納用変数
     private var imageList = mutableListOf<Uri>()
@@ -59,6 +59,10 @@ class MainActivity : AppCompatActivity(), View.OnClickListener {
         start_pause_button.setOnClickListener(this)
         proceed_button.setOnClickListener(this)
 
+        if (imageList.size > 0) {
+            imageView.setImageURI(imageList[nowIndex])
+            startSlideshow()
+        }
     }
 
 
@@ -70,7 +74,8 @@ class MainActivity : AppCompatActivity(), View.OnClickListener {
                 if (grantResults[0] == PackageManager.PERMISSION_GRANTED) {
                     getSlideshowContents()
                 } else {
-                    // TODO アプリを閉じる　（ここでいいかもよくわからないけど）
+                    // 必要な権限がなければアプリ終了
+                    finish()
                 }
             }
         }
@@ -108,27 +113,28 @@ class MainActivity : AppCompatActivity(), View.OnClickListener {
 
         when (p0.id) {
             R.id.back_button -> {
-                if (imageList.size - 1 <= nowPage){
-                    nowPage = 0
-                } else {
-                    nowPage++
-                }
-
-                imageView.setImageURI(imageList[nowPage])
+                imageView.setImageURI(imageList[getNextSlideIndex(true)])
 
                 pauseSlideshow()
             }
             R.id.start_pause_button -> {
-                // TODO ボタン対応
-            }
-            R.id.proceed_button -> {
-                if (nowPage == 0){
-                    nowPage = imageList.size - 1
-                } else {
-                    nowPage--
-                }
 
-                imageView.setImageURI(imageList[nowPage])
+                if (mTimer == null) {
+                    startSlideshow()
+
+                    // ボタンのラベル変更
+                    start_pause_button.text = "停止"
+
+                } else {
+                    pauseSlideshow()
+
+                    // ボタンのラベル変更
+                    start_pause_button.text = "再生"
+
+                }
+            }
+           R.id.proceed_button -> {
+                imageView.setImageURI(imageList[getNextSlideIndex(false)])
 
                 pauseSlideshow()
             }
@@ -138,17 +144,33 @@ class MainActivity : AppCompatActivity(), View.OnClickListener {
     // スライドショーを再生させるメソッド
     private fun startSlideshow() {
 
-        mTimer = Timer()
+        if (imageList.size == 0){
+            return
+        }
 
+        if (mTimer == null){
+            mTimer = Timer()
+            mTimer!!.schedule(object: TimerTask(){
+                override fun run() {
+                    mHandler.post {
+                        imageView.setImageURI(imageList[getNextSlideIndex(true)])
+                    }
+                }
+            }, 2000, 2000)
 
-        // スライドショー再生中は進む・戻るボタンを押せないようにする
-        changeButtonAvailability(false)
-
+            // スライドショー再生中は進む・戻るボタンを押せないようにする
+            changeButtonAvailability(false)
+        }
     }
 
 
     // スライドショーを停止させるメソッド
     private fun pauseSlideshow() {
+
+        if (mTimer != null){
+            mTimer!!.cancel()
+            mTimer = null
+        }
 
         // スライドショー停止中は進む・戻るボタンを押せるようにする
         changeButtonAvailability(true)
@@ -160,6 +182,34 @@ class MainActivity : AppCompatActivity(), View.OnClickListener {
     private fun changeButtonAvailability(isEnable: Boolean) {
         back_button.isEnabled = isEnable
         proceed_button.isEnabled = isEnable
+    }
+
+    // 次に表示するスライド画像のURIを取得するメソッド
+    // doesProceedがtrueなら、１つ後の画像
+    // doesProceedがfalseなら、１つ前の画像　のURIを取得する
+     private fun getNextSlideIndex(doesProceed: Boolean) :Int {
+
+        if (doesProceed) {
+            // ----------------------
+            // １つ後のスライドを取得する
+            // ----------------------
+            if (imageList.size - 1 <= nowIndex){
+                nowIndex = 0
+            } else {
+                nowIndex++
+            }
+        } else {
+            // ----------------------
+            // １つ前のスライドを取得する
+            // ----------------------
+            if (nowIndex == 0){
+                nowIndex = imageList.size - 1
+            } else {
+                nowIndex--
+            }
+        }
+
+        return nowIndex
     }
 
 
