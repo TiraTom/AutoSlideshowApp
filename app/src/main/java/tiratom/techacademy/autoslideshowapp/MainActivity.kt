@@ -62,6 +62,15 @@ class MainActivity : AppCompatActivity(), View.OnClickListener {
         if (imageList.size > 0) {
             imageView.setImageURI(imageList[nowIndex])
             startSlideshow()
+        } else {
+            // ボタンの無効化
+            changeButtonAvailability(false)
+            start_pause_button.isEnabled = false
+
+            Snackbar.make(mainView, "表示画像がありません", Snackbar.LENGTH_INDEFINITE)
+                .setAction("Ok"){}
+                .show()
+
         }
     }
 
@@ -113,7 +122,7 @@ class MainActivity : AppCompatActivity(), View.OnClickListener {
 
         when (p0.id) {
             R.id.back_button -> {
-                imageView.setImageURI(imageList[getNextSlideIndex(true)])
+                imageView.setImageURI(imageList[getNextSlideIndex(false)])
 
                 pauseSlideshow()
             }
@@ -134,7 +143,7 @@ class MainActivity : AppCompatActivity(), View.OnClickListener {
                 }
             }
            R.id.proceed_button -> {
-                imageView.setImageURI(imageList[getNextSlideIndex(false)])
+                imageView.setImageURI(imageList[getNextSlideIndex(true)])
 
                 pauseSlideshow()
             }
@@ -157,6 +166,9 @@ class MainActivity : AppCompatActivity(), View.OnClickListener {
                     }
                 }
             }, 2000, 2000)
+
+            // ボタンのラベルを「停止」に変更する
+            start_pause_button.text = "停止"
 
             // スライドショー再生中は進む・戻るボタンを押せないようにする
             changeButtonAvailability(false)
@@ -184,9 +196,9 @@ class MainActivity : AppCompatActivity(), View.OnClickListener {
         proceed_button.isEnabled = isEnable
     }
 
-    // 次に表示するスライド画像のURIを取得するメソッド
+    // imageListについて、次に表示するスライド画像のindexを取得するメソッド
     // doesProceedがtrueなら、１つ後の画像
-    // doesProceedがfalseなら、１つ前の画像　のURIを取得する
+    // doesProceedがfalseなら、１つ前の画像　のindexを取得する
      private fun getNextSlideIndex(doesProceed: Boolean) :Int {
 
         if (doesProceed) {
